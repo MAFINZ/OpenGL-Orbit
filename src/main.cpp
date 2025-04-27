@@ -32,10 +32,10 @@ int main() {
 	Shader shaderProgram("../shaders/shader.vs", "../shaders/shader.fs");
 
 	int nVertices = 32;
-	glm::vec3 circlePos[2] = {glm::vec3(-1, 0, 0), glm::vec3(1, 0, 0)};
+	glm::vec3 circlePos[2] = {glm::vec3(-2, 0, 0), glm::vec3(1, 1, 0)};
 
 	float angle = (float) 360.0/nVertices;
-	float radius = 0.5f;
+	float radius = 1.0f;
 
 	float circle[nVertices*3+3];
 	int circleIndices[nVertices*3];
@@ -75,8 +75,16 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	glm::mat4 model = glm::mat4(1.0);
-	glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, -3.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	glm::mat4 projection = glm::perspective(glm::radians(70.0f), 800.0f/600.0f, 0.1f, 100.0f);
+	
+	shaderProgram.use();
+	int modelLoc = glGetUniformLocation(shaderProgram.ID, "model");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+	int modelView = glGetUniformLocation(shaderProgram.ID, "view");
+	glUniformMatrix4fv(modelView, 1, GL_FALSE, glm::value_ptr(view));
+	int modelProj = glGetUniformLocation(shaderProgram.ID, "projection");
+	glUniformMatrix4fv(modelProj, 1, GL_FALSE, glm::value_ptr(projection));
 
 	while(!glfwWindowShouldClose(window)) {
 		processInput(window);
@@ -87,20 +95,17 @@ int main() {
 
 		shaderProgram.use();
 
-		int modelLoc = glGetUniformLocation(shaderProgram.ID, "model");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        int modelView = glGetUniformLocation(shaderProgram.ID, "view");
-        glUniformMatrix4fv(modelView, 1, GL_FALSE, glm::value_ptr(view));
-        int modelProj = glGetUniformLocation(shaderProgram.ID, "projection");
-        glUniformMatrix4fv(modelProj, 1, GL_FALSE, glm::value_ptr(projection));
 
         model = glm::mat4(1.0f);
 
 		glBindVertexArray(VAO);
 		model = glm::translate(model, circlePos[0]);
+		model = glm::scale(model, glm::vec3(2, 2, 0));
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glDrawElements(GL_TRIANGLES, sizeof(circleIndices)/sizeof(int), GL_UNSIGNED_INT, 0);
+		model = glm::mat4(1.0f);
 		model = glm::translate(model, circlePos[1]);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glDrawElements(GL_TRIANGLES, sizeof(circleIndices)/sizeof(int), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 
