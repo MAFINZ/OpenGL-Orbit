@@ -10,6 +10,8 @@
 #include "../../include/shader.h"
 
 #include <iostream>
+
+#define _USE_MATH_DEFINES
 #include <cmath>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -27,10 +29,12 @@ int main() {
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 	glViewport(0, 0, 800, 600);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	std::cout << "Shader Init" << std::endl;
 	Shader shaderProgram("../shaders/shader.vs", "../shaders/shader.fs");
-
+	/*
 	int nVertices = 32;
 	glm::vec3 circlePos[2] = {glm::vec3(-2, 0, 0), glm::vec3(1, 1, 0)};
 
@@ -48,14 +52,64 @@ int main() {
 		circle[(i+1)*3] = radius * sin(glm::radians(angle * (i)));
 		circle[(i+1)*3+1] = radius * cos(glm::radians(angle * (i)));
 		circle[(i+1)*3+2] = 0.0f;   
-		std::cout << angle * i << std::endl;
-		std::cout << circle[(i+1)*3] << ", " << circle[(i+1)*3+1] << ", " << circle[(i+1)*3+2] << std::endl;
+		//std::cout << angle * i << std::endl;
+		//std::cout << circle[(i+1)*3] << ", " << circle[(i+1)*3+1] << ", " << circle[(i+1)*3+2] << std::endl;
 		circleIndices[i*3] = 0;
 		circleIndices[i*3+1] = i+1;
 		circleIndices[i*3+2] = (i+2) > nVertices ? 1 : i+2;
-		std::cout << circleIndices[i*3] << ", " << circleIndices[i*3+1] << ", " << circleIndices[i*3+2] << std::endl;
+		//std::cout << circleIndices[i*3] << ", " << circleIndices[i*3+1] << ", " << circleIndices[i*3+2] << std::endl;
 	}
+	*/
 
+	int divisions = 2;
+	glm::vec3 circlePos = glm::vec3(0.0f, 0.0f, 0.0f);
+
+	float angleChange = 2*M_PI/6;
+	float upAngle = 0.0f;
+	float sideAngle = 0.0f;
+	float radius = 1.0f;
+
+	float sphereVertices[((divisions*divisions)*3)+6];
+	int sphereIndices[(6 + divisions * divisions];
+	int nVert = sizeof(sphereVertices)/sizeof(float);
+
+	std::cout << "Sphere size: " << nVert << std::endl;
+	std::cout << "Indexes: " << sizeof(sphereIndices)/sizeof(int) << std::endl; 
+
+	sphereVertices[0] = 0.0f,
+	sphereVertices[1] = radius;
+	sphereVertices[2] = 0.0f;
+	sphereVertices[nVert * 3 - 2] = 0.0f,
+	sphereVertices[nVert * 3 - 1] = -radius;
+	sphereVertices[nVert * 3] = 0.0f;
+
+	for(int i = 0; i < divisions; i++) {
+		for(int j = 1; j < divisons-1; j++) {
+			sphereVertices[j*3 + (i * 3)] = (radius*cos(angleChange * j)) * sin(angleChange * i); //X
+			sphereVertices[j*3 + (i * 3) + 1] = (radius*cos(angleChange * j)) * cos(angleChange * i); //Y
+			sphereVertices[j*3 + (i * 3) + 2] = radius * sin(M_PI/2 + angleChange * i); //Z 
+		}
+	}
+	for(int i = 0; i < divisions; i++) {
+		//   0  				(013)(123)(234)(924)
+		//  1 3
+		//  2 4
+		//   9
+		sphereIndices[i * divisions] = 0; //top triangle
+		sphereIndices[i * divisions + 1] = 1 * i * divisions;
+		sphereIndices[i * divisions + 2] = 2 * i * divisions;
+		for(int j = 1; j < divisions-1; j++) {
+			sphereIndices[3 * j] = 1;  		//top left triangle of square
+			sphereIndices[3 * j + 1] = 2;
+			sphereIndices[3 * j + 2] = 3;
+			sphereIndices[3 * j + 3] = 2;	//bottom right triangle of square
+			sphereIndices[3 * j + 4] = 3;
+			sphereIndices[3 * j + 5] = 4;
+		} 	
+		sphereIndices[i * 6 + 3] = 9;
+		sphereIndices[i * 6 + 4] = 2 * ;
+		sphereIndices[i * 6 + 5] = 4;
+	}
 	
 
 	unsigned int VAO, VBO, EBO;
@@ -66,9 +120,9 @@ int main() {
 
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(circle), circle, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(sphereVertices), sphereVertices, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(circleIndices), circleIndices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(sphereIndices), sphereIndices, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
@@ -95,9 +149,8 @@ int main() {
 
 		shaderProgram.use();
 
-
         model = glm::mat4(1.0f);
-
+        /*
 		glBindVertexArray(VAO);
 		model = glm::translate(model, circlePos[0]);
 		model = glm::scale(model, glm::vec3(2, 2, 0));
@@ -108,7 +161,7 @@ int main() {
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glDrawElements(GL_TRIANGLES, sizeof(circleIndices)/sizeof(int), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
-
+		*/
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
