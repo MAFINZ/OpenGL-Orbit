@@ -61,7 +61,7 @@ int main() {
 	}
 	*/
 
-	int divisions = 2;
+	int divisions = 4;
 	glm::vec3 circlePos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	float angleChange = 2*M_PI/6;
@@ -69,48 +69,42 @@ int main() {
 	float sideAngle = 0.0f;
 	float radius = 1.0f;
 
-	float sphereVertices[((divisions*divisions)*3)+6];
-	int sphereIndices[(6 + divisions * divisions];
-	int nVert = sizeof(sphereVertices)/sizeof(float);
+	int trisPerArc = (2 + 2*(divisions - 3));
+	int nVert = (2 + divisions * (divisions - 2));
+	float sphereVertices[nVert*3] = 0;
+	int sphereIndices[3 * trisPerArc * divisions] = 0;
 
 	std::cout << "Sphere size: " << nVert << std::endl;
 	std::cout << "Indexes: " << sizeof(sphereIndices)/sizeof(int) << std::endl; 
 
+	//make top and bottom vertices
 	sphereVertices[0] = 0.0f,
 	sphereVertices[1] = radius;
 	sphereVertices[2] = 0.0f;
-	sphereVertices[nVert * 3 - 2] = 0.0f,
-	sphereVertices[nVert * 3 - 1] = -radius;
-	sphereVertices[nVert * 3] = 0.0f;
-
+	sphereVertices[nVert*3 - 3] = 0.0f,
+	sphereVertices[nVert*3 - 2] = -radius;
+	sphereVertices[nVert*3 - 1] = 0.0f;
+	//make remaining vertices
 	for(int i = 0; i < divisions; i++) {
-		for(int j = 1; j < divisons-1; j++) {
+		for(int j = 1; j <= divisions-2; j++) {
 			sphereVertices[j*3 + (i * 3)] = (radius*cos(angleChange * j)) * sin(angleChange * i); //X
 			sphereVertices[j*3 + (i * 3) + 1] = (radius*cos(angleChange * j)) * cos(angleChange * i); //Y
 			sphereVertices[j*3 + (i * 3) + 2] = radius * sin(M_PI/2 + angleChange * i); //Z 
 		}
 	}
-	for(int i = 0; i < divisions; i++) {
-		//   0  				(013)(123)(234)(924)
-		//  1 3
-		//  2 4
-		//   9
-		sphereIndices[i * divisions] = 0; //top triangle
-		sphereIndices[i * divisions + 1] = 1 * i * divisions;
-		sphereIndices[i * divisions + 2] = 2 * i * divisions;
-		for(int j = 1; j < divisions-1; j++) {
-			sphereIndices[3 * j] = 1;  		//top left triangle of square
-			sphereIndices[3 * j + 1] = 2;
-			sphereIndices[3 * j + 2] = 3;
-			sphereIndices[3 * j + 3] = 2;	//bottom right triangle of square
-			sphereIndices[3 * j + 4] = 3;
-			sphereIndices[3 * j + 5] = 4;
+	for(int i = 0; i < divisions; i++) { //each arc
+		sphereIndices[0 + i * (trisPerArc) * 3] = 0; //top triangle
+		sphereIndices[1 + i * (trisPerArc) * 3] = 1 + i * divisions;
+		sphereIndices[2 + i * (trisPerArc) * 3] = (1 + i * divisions * 2);
+		for(int j = 0; j < divisions-3; j++) { //squares and triangles in arc
+			
 		} 	
-		sphereIndices[i * 6 + 3] = 9;
-		sphereIndices[i * 6 + 4] = 2 * ;
-		sphereIndices[i * 6 + 5] = 4;
+		
 	}
 	
+	for(int i = 0; i < trisPerArc * divisions; i++) {
+		std::cout << sphereIndices[i] << ", " << sphereIndices[i+1] << ", " << sphereIndices[i+2] << std::endl; 
+	}
 
 	unsigned int VAO, VBO, EBO;
 
