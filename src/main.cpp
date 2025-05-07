@@ -61,49 +61,69 @@ int main() {
 	}
 	*/
 
-	int divisions = 4;
+	int divisions = 16;
 	glm::vec3 circlePos = glm::vec3(0.0f, 0.0f, 0.0f);
 
-	float angleChange = 2*M_PI/6;
-	float upAngle = 0.0f;
-	float sideAngle = 0.0f;
+	float vertAngleChange = M_PI/(divisions-1);
+	float horiAngleChange = (2*M_PI)/divisions;
 	float radius = 1.0f;
 
-	int trisPerArc = (2 + 2*(divisions - 3));
-	int nVert = (2 + divisions * (divisions - 2));
-	float sphereVertices[nVert*3] = 0;
-	int sphereIndices[3 * trisPerArc * divisions] = 0;
+	float sphereVertices[((divisions-2)*divisions+2) * 3];
+	int sphereIndices[((divisions-3)*2+2) * divisions * 3];
+	int lastIndVert = sizeof(sphereVertices)/sizeof(float) - 1;
 
-	std::cout << "Sphere size: " << nVert << std::endl;
+	std::cout << "Sphere size: " << lastIndVert + 1 << std::endl;
 	std::cout << "Indexes: " << sizeof(sphereIndices)/sizeof(int) << std::endl; 
 
-	//make top and bottom vertices
-	sphereVertices[0] = 0.0f,
-	sphereVertices[1] = radius;
-	sphereVertices[2] = 0.0f;
-	sphereVertices[nVert*3 - 3] = 0.0f,
-	sphereVertices[nVert*3 - 2] = -radius;
-	sphereVertices[nVert*3 - 1] = 0.0f;
-	//make remaining vertices
-	for(int i = 0; i < divisions; i++) {
-		for(int j = 1; j <= divisions-2; j++) {
-			sphereVertices[j*3 + (i * 3)] = (radius*cos(angleChange * j)) * sin(angleChange * i); //X
-			sphereVertices[j*3 + (i * 3) + 1] = (radius*cos(angleChange * j)) * cos(angleChange * i); //Y
-			sphereVertices[j*3 + (i * 3) + 2] = radius * sin(M_PI/2 + angleChange * i); //Z 
+	sphereVertices[0] = 0.0f; //x top vert
+	sphereVertices[1] = radius; //y
+	sphereVertices[2] = 0.0f; //z
+	sphereVertices[lastIndVert-2] = 0.0f; //x bottom vert
+	sphereVertices[lastIndVert-1] = -radius; //y
+	sphereVertices[lastIndVert] = 0.0f; //z
+
+	int index = 3;
+	for(int arc = 0; arc < divisions; arc++) {
+		std::cout << "making arc " << arc << std::endl;
+		for(int ring = 1; ring <= divisions-2; ring++) {
+			std::cout << "making ring " << ring << std::endl;
+
+			sphereVertices[index++] = radius * sin(vertAngleChange * ring) * cos(horiAngleChange*arc);//X
+			sphereVertices[index++] = radius * cos(vertAngleChange * ring); //Y
+			sphereVertices[index++] = radius * sin(vertAngleChange * ring)* sin(horiAngleChange*arc); //Z 
 		}
 	}
-	for(int i = 0; i < divisions; i++) { //each arc
-		sphereIndices[0 + i * (trisPerArc) * 3] = 0; //top triangle
-		sphereIndices[1 + i * (trisPerArc) * 3] = 1 + i * divisions;
-		sphereIndices[2 + i * (trisPerArc) * 3] = (1 + i * divisions * 2);
-		for(int j = 0; j < divisions-3; j++) { //squares and triangles in arc
-			
-		} 	
-		
-	}
+	index = 0;
+	for(int arc = 0; arc < divisions; arc++) {
+		// top triangle
+		sphereIndices[index++] = 0; // top
+		sphereIndices[index++] = 1 + arc * (divisions-2); // bottom left
+		sphereIndices[index++] = (arc == divisions - 1) ? 1 : 1 + (arc+1) * (divisions-2); // bottom right
+		for(int ring = 0; ring < divisions-3; ring++) {
+			/* 0 
+			  1 3 5 7
+			  2 4 6 8
+			       9
+			*/
+			//top triangle
+			sphereIndices[index++] = 1 + ring + (divisions - 2) * arc; //top left
+			sphereIndices[index++] = 2 + ring + (divisions - 2) * arc; // bottom left
+			sphereIndices[index++] = (arc == divisions - 1) ? 1 + ring : 1 + ring + (divisions - 2) * (arc + 1); //top right
+			//bottom triangle
+			sphereIndices[index++] = 2 + ring + (divisions - 2) * arc; // bottom left
+			sphereIndices[index++] = (arc == divisions - 1) ? 1 + ring : 1 + ring + (divisions - 2) * (arc + 1);
+			sphereIndices[index++] = (arc == divisions - 1) ? 2 + ring : 2 + ring + (divisions - 2) * (arc + 1); 
+		}
+		sphereIndices[index++] = (divisions - 2) + (divisions - 2) * arc; //top left
+		sphereIndices[index++] = (arc == divisions - 1) ? (divisions - 2)  : (divisions - 2) + (divisions - 2) * (arc + 1); // top right;
+		sphereIndices[index++] = (lastIndVert + 1) / 3 - 1;
+
+	}	
 	
-	for(int i = 0; i < trisPerArc * divisions; i++) {
-		std::cout << sphereIndices[i] << ", " << sphereIndices[i+1] << ", " << sphereIndices[i+2] << std::endl; 
+	for(int i = 0; i < sizeof(sphereVertices)/sizeof(float);) {
+		std::cout << i << ": " << sphereVertices[i++] << ", " 
+		<< i << ": " << sphereVertices[i++] << ", " 
+		<< i << ": " << sphereVertices[i++] << std::endl;
 	}
 
 	unsigned int VAO, VBO, EBO;
@@ -139,23 +159,19 @@ int main() {
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 		shaderProgram.use();
 
         model = glm::mat4(1.0f);
-        /*
+        
 		glBindVertexArray(VAO);
-		model = glm::translate(model, circlePos[0]);
-		model = glm::scale(model, glm::vec3(2, 2, 0));
+		model = glm::translate(model, circlePos);
+		model = glm::rotate(model, (float) (glm::radians(25.0f) * glfwGetTime()), glm::vec3(0.5f, 1.0f, 0.0f));
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glDrawElements(GL_TRIANGLES, sizeof(circleIndices)/sizeof(int), GL_UNSIGNED_INT, 0);
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, circlePos[1]);
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glDrawElements(GL_TRIANGLES, sizeof(circleIndices)/sizeof(int), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, sizeof(sphereIndices)/sizeof(int), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
-		*/
+		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
